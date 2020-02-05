@@ -1,0 +1,224 @@
+#!/bin/bash
+
+VHELPER_PROGNAME="vhelper"
+VHELPER_PATH="${HOME}/.vhelper"
+VHELPER_VERSION='3.1415'
+
+if [ ! -d $VHELPER_PATH ]; then
+    mkdir $VHELPER_PATH
+fi
+
+# make
+#     - verbose
+#     - force
+#     - autoinstall
+# workon
+#     - force
+#     - verbose
+#     - autoinstall
+# remove
+#     - verbose
+
+case $1 in
+    u | usage)
+        echo "Usage : $VHELPER_PROGNAME [MODE] [OPTION] [ENVIRON]"
+        echo "Modes:"
+        echo " h, help : show help"
+        echo " v, version : show version"
+        echo " m, make : make new environment"
+        echo " r, remove : remove environment"
+        echo " l, list : show all environments"
+        echo " w, workon : activate environment"
+        ;;
+    v | version)
+        echo $VHELPER_VERSION
+        ;;
+    l | list)
+        for VHELPER_ENVNAME in `ls -1 ${VHELPER_PATH}`; do
+            echo $VHELPER_ENVNAME
+        done
+        ;;
+    m | make)
+        while true; do
+            shift
+            case $1 in
+                -*)
+                    if [[ "$1" =~ 'f' ]]; then
+                        VHELPER_FLAG_FORCE=1
+                    fi
+                    if [[ "$1" =~ 'v' ]]; then
+                        VHELPER_FLAG_VERBOSE=1
+                    fi
+                    if [[ "$1" =~ 'a' ]]; then
+                        VHELPER_FLAG_AUTOINSTALL=1
+                    fi
+                    ;;
+                --*)
+                    case $1 in
+                        --force) VHELPER_FLAG_FORCE=1 ;;
+                        --verbose) VHELPER_FLAG_VERBOSE=1 ;;
+                        --autoinstall) VHELPER_FLAG_AUTOINSTALL=1 ;;
+                    esac
+                    ;;
+                *)
+                    break
+                    ;;
+            esac
+        done
+
+        if [ -n "$1" ]; then
+            VHELPER_ENVNAME="$1"
+        else
+            VHELPER_ENVNAME=`basename \`pwd\``
+        fi
+        VHELPER_ENVDIR="${VHELPER_PATH}/${VHELPER_ENVNAME}"
+
+        if [ -d $VHELPER_ENVDIR ]; then
+            if [ -v VHELPER_FLAG_FORCE ]; then
+                rm -rf $VHELPER_ENVDIR
+            else
+                echo "${VHELPER_ENVNAME} is already exists."
+                unset VHELPER_ENVDIR
+                unset VHELPER_ENVNAME
+                unset VHELPER_FLAG_AUTOINSTALL
+                unset VHELPER_FLAG_FORCE
+                unset VHELPER_FLAG_VERBOSE
+                unset VHELPER_PATH
+                unset VHELPER_PROGNAME
+                unset VHELPER_VERSION
+                return 1
+            fi
+        fi
+
+        if [ -v VHELPER_FLAG_VERBOSE ]; then
+            echo "make virtual environ ${VHELPER_ENVNAME}"
+        fi
+
+        python3 -m venv $VHELPER_ENVDIR
+
+        if [ -v VHELPER_FLAG_VERBOSE ]; then
+            echo "activate ${VHELPER_ENVNAME}"
+        fi
+
+        source "${VHELPER_ENVDIR}/bin/activate"
+
+        if [ -v VHELPER_FLAG_AUTOINSTALL ]; then
+            if [ -v VHELPER_FLAG_VERBOSE ]; then
+                echo 'install libraries from requirements.txt'
+            fi
+            pip3 install -r requirements.txt
+        fi
+        ;;
+    w | workon)
+        while true; do
+            shift
+            case $1 in
+                -*)
+                    if [[ "$1" =~ 'f' ]]; then
+                        VHELPER_FLAG_FORCE=1
+                    fi
+                    if [[ "$1" =~ 'v' ]]; then
+                        VHELPER_FLAG_VERBOSE=1
+                    fi
+                    if [[ "$1" =~ 'a' ]]; then
+                        VHELPER_FLAG_AUTOINSTALL=1
+                    fi
+                    ;;
+                --*)
+                    case $1 in
+                        --force) VHELPER_FLAG_FORCE=1 ;;
+                        --verbose) VHELPER_FLAG_VERBOSE=1 ;;
+                        --autoinstall) VHELPER_FLAG_AUTOINSTALL=1 ;;
+                    esac
+                    ;;
+                *)
+                    break
+                    ;;
+            esac
+        done
+
+        if [ -n "$1" ]; then
+            VHELPER_ENVNAME="$1"
+        else
+            VHELPER_ENVNAME=`basename \`pwd\``
+        fi
+        VHELPER_ENVDIR="${VHELPER_PATH}/${VHELPER_ENVNAME}"
+
+        if [ -d $VHELPER_ENVDIR ]; then
+            if [ -v VHELPER_FLAG_VERBOSE ]; then
+                echo "activate ${VHELPER_ENVNAME}"
+            fi
+            source "${VHELPER_ENVDIR}/bin/activate"
+        else
+            if [ -v VHELPER_FLAG_FORCE ]; then
+                if [ -v VHELPER_FLAG_VERBOSE ]; then
+                    echo "make virtual environ ${VHELPER_ENVNAME}"
+                fi
+
+                python3 -m venv $VHELPER_ENVDIR
+
+                if [ -v VHELPER_FLAG_VERBOSE ]; then
+                    echo "activate ${VHELPER_ENVNAME}"
+                fi
+                source "${VHELPER_ENVDIR}/bin/activate"
+
+                if [ -v VHELPER_FLAG_AUTOINSTALL ]; then
+                    if [ -v VHELPER_FLAG_VERBOSE ]; then
+                        echo 'install libraries from requirements.txt'
+                    fi
+                    pip3 install -r requirements.txt
+                fi
+            else
+                echo "${VHELPER_ENVNAME} is not exist"
+            fi
+        fi
+        ;;
+    r | remove)
+        while true; do
+            shift
+            case $1 in
+                -*)
+                    if [[ "$1" =~ 'v' ]]; then
+                        VHELPER_FLAG_VERBOSE=1
+                    fi
+                    ;;
+                --*)
+                    case $1 in
+                        --verbose) VHELPER_FLAG_VERBOSE=1 ;;
+                    esac
+                    ;;
+                *)
+                    break
+                    ;;
+            esac
+        done
+
+        if [ -n "$1" ]; then
+            VHELPER_ENVNAME="$1"
+        else
+            VHELPER_ENVNAME=`basename \`pwd\``
+        fi
+        VHELPER_ENVDIR="${VHELPER_PATH}/${VHELPER_ENVNAME}"
+
+        if [ -d $VHELPER_ENVDIR ]; then
+            if [ -v VHELPER_FLAG_VERBOSE ]; then
+                echo "remove ${VHELPER_ENVNAME}"
+            fi
+            rm -r $VHELPER_ENVDIR
+        else
+            echo "${VHELPER_ENVNAME} is not exist"
+        fi
+        ;;
+
+esac
+
+#clean
+unset VHELPER_ENVDIR
+unset VHELPER_ENVNAME
+unset VHELPER_FLAG_AUTOINSTALL
+unset VHELPER_FLAG_REMOVE_ALL
+unset VHELPER_FLAG_FORCE
+unset VHELPER_FLAG_VERBOSE
+unset VHELPER_PATH
+unset VHELPER_PROGNAME
+unset VHELPER_VERSION
